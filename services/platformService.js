@@ -17,10 +17,13 @@ const getDataFiat = async (item) => {
   const headers = { "X-Api-Key": item };
 
   try {
-    fiattransactionResponse = await axios.get(endpoints.fiattransaction, {
-      params: { page_size: 1000 },
-      headers,
-    });
+    fiattransactionResponse = await axios.default.get(
+      endpoints.fiattransaction,
+      {
+        params: { page_size: 1000 },
+        headers,
+      }
+    );
   } catch (error) {
     console.log("voici l erreur data fiat ");
     throw error;
@@ -246,10 +249,13 @@ const getDataCrypto = async (item) => {
   };
 
   try {
-    cryptotransactionResponse = await axios.get(endpoints.cryptotransaction, {
-      params: { page_size: 10000, status: "finished" },
-      headers,
-    });
+    cryptotransactionResponse = await axios.default.get(
+      endpoints.cryptotransaction,
+      {
+        params: { page_size: 10000, status: "finished" },
+        headers,
+      }
+    );
   } catch (error) {
     console.log("voici l erreur datacrypto ");
     throw error;
