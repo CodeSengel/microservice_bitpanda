@@ -1,0 +1,7 @@
+[build]
+  command = "npm run build"
+  functions = "built-lambda"
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
