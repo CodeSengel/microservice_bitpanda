@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "netlify-lambda serve functions",
+    "build": "export NODE_OPTIONS=--openssl-legacy-provider && netlify-lambda build functions-build"
   },
   "keywords": [],
   "author": "",
