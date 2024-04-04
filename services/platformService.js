@@ -188,32 +188,52 @@ function transformtransfertlist(transfertlist) {
 
   Object.keys(transfertlist).forEach((coin) => {
     const coinData = transfertlist[coin];
-    const total = coinData.reduce((acc, item) => {
+
+    const totalStakeMouvement = coinData.reduce((acc, item) => {
       const amount = parseFloat(item.attributes.amount);
-      if (item.attributes.in_or_out === "outgoing") {
+      if (
+        item.attributes.in_or_out === "outgoing" &&
+        tags[0].attributes.short_name == "stake"
+      ) {
         return acc - amount;
-      } else if (item.attributes.in_or_out === "incoming") {
+      } else if (
+        item.attributes.in_or_out === "incoming" &&
+        tags[0].attributes.short_name == "unstake"
+      ) {
         return acc + amount;
       }
       return acc; // Handle other cases (e.g., unknown in_or_out value)
     }, 0);
+
+    const rewards = coinData.reduce((acc, item) => {
+      const amount = parseFloat(item.attributes.amount);
+      if (
+        item.attributes.in_or_out === "incoming" &&
+        tags[0].attributes.short_name == "reward"
+      ) {
+        return acc - amount;
+      }
+    }, 0);
+
     const fee = coinData.reduce(
       (acc, item) => acc + parseFloat(item.attributes.fee),
       0
     );
 
-    if (total < 0) {
-      stakedAmount = total * -1;
+    if (totalStakeMouvement < 0) {
+      stakedAmount = totalStakeMouvement * -1;
     }
 
-    transformtransfertlist[coin] = {
-      transfert: {
-        total,
-        fee,
-        stakedAmount,
-        transfertdetails: coinData, // Laissez tous les attributs par défaut
-      },
-    };
+    (total = rewards + totalStakeMouvement),
+      (transformtransfertlist[coin] = {
+        transfert: {
+          total,
+          fee,
+          rewards,
+          stakedAmount,
+          transfertdetails: coinData, // Laissez tous les attributs par défaut
+        },
+      });
   });
 
   return transformtransfertlist;
