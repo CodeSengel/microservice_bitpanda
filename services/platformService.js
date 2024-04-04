@@ -182,61 +182,37 @@ function transformwithdrawallist(withdrawallist) {
   return transformwithdrawallist;
 }
 
-function transformtransfertlist(transfertlist) {
-  const transformtransfertlist = {};
-  let stakedAmount = 0;
+function transformBuylist(buylist) {
+  const transformedBuylist = {};
 
-  Object.keys(transfertlist).forEach((coin) => {
-    const coinData = transfertlist[coin];
-
-    const totalStakeMouvement = coinData.reduce((acc, item) => {
-      const amount = parseFloat(item.attributes.amount);
-      if (
-        item.attributes.in_or_out === "outgoing" &&
-        tags[0].attributes.short_name == "stake"
-      ) {
-        return acc - amount;
-      } else if (
-        item.attributes.in_or_out === "incoming" &&
-        tags[0].attributes.short_name == "unstake"
-      ) {
-        return acc + amount;
-      }
-      return acc; // Handle other cases (e.g., unknown in_or_out value)
-    }, 0);
-
-    const rewards = coinData.reduce((acc, item) => {
-      const amount = parseFloat(item.attributes.amount);
-      if (
-        item.attributes.in_or_out === "incoming" &&
-        tags[0].attributes.short_name == "reward"
-      ) {
-        return acc - amount;
-      }
-    }, 0);
-
+  Object.keys(buylist).forEach((coin) => {
+    const coinData = buylist[coin];
+    const total = coinData.reduce(
+      (acc, item) => acc + parseFloat(item.attributes.amount),
+      0
+    );
+    const invest = coinData.reduce(
+      (acc, item) => acc + parseFloat(item.attributes.amount_eur),
+      0
+    );
     const fee = coinData.reduce(
       (acc, item) => acc + parseFloat(item.attributes.fee),
       0
     );
+    const averageprice = invest / total;
 
-    if (totalStakeMouvement < 0) {
-      stakedAmount = totalStakeMouvement * -1;
-    }
-
-    (total = rewards + totalStakeMouvement),
-      (transformtransfertlist[coin] = {
-        transfert: {
-          total,
-          fee,
-          rewards,
-          stakedAmount,
-          transfertdetails: coinData, // Laissez tous les attributs par défaut
-        },
-      });
+    transformedBuylist[coin] = {
+      buy: {
+        total,
+        invest,
+        fee,
+        averageprice,
+        buydetails: coinData, // Laissez tous les attributs par défaut
+      },
+    };
   });
 
-  return transformtransfertlist;
+  return transformedBuylist;
 }
 
 // Fonction pour regrouper par coin
