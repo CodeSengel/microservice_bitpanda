@@ -17,31 +17,29 @@ const getDataFiat = async (item) => {
   const headers = { "X-Api-Key": item };
 
   try {
-    fiattransactionResponse = await axios.default.get(
-      endpoints.fiattransaction,
-      {
-        params: { page_size: 1000 },
-        headers,
+    fiattransactionResponse = await axios.get(endpoints.fiattransaction, {
+      params: { page_size: 1000 },
+      headers,
+    });
+    const fiattransactionData = fiattransactionResponse.data.data;
+
+    fiattransactionData.forEach((element) => {
+      if (element.attributes.type == "deposit") {
+        fiatDepositDetails.push(element);
+        fiatDepositAmount =
+          fiatDepositAmount + parseFloat(element.attributes.amount);
       }
-    );
+      if (element.attributes.type == "withdrawal") {
+        fiatwithdrawalDetails.push(element);
+        fiatwithdrawalAmount =
+          fiatwithdrawalAmount + parseFloat(element.attributes.amount);
+      }
+    });
   } catch (error) {
     console.log("voici l erreur data fiat ");
     throw error;
   }
-  const fiattransactionData = fiattransactionResponse.data.data;
 
-  fiattransactionData.forEach((element) => {
-    if (element.attributes.type == "deposit") {
-      fiatDepositDetails.push(element);
-      fiatDepositAmount =
-        fiatDepositAmount + parseFloat(element.attributes.amount);
-    }
-    if (element.attributes.type == "withdrawal") {
-      fiatwithdrawalDetails.push(element);
-      fiatwithdrawalAmount =
-        fiatwithdrawalAmount + parseFloat(element.attributes.amount);
-    }
-  });
   return {
     deposit: { details: fiatDepositDetails, total: fiatDepositAmount },
     withdrawal: { details: fiatwithdrawalDetails, total: fiatwithdrawalAmount },
@@ -182,39 +180,71 @@ function transformwithdrawallist(withdrawallist) {
   return transformwithdrawallist;
 }
 
-function transformBuylist(buylist) {
-  const transformedBuylist = {};
+function transformtransfertlist(transfertlist) {
+  const transformtransfertlist = {};
+  let stakedAmount = 0;
 
-  Object.keys(buylist).forEach((coin) => {
-    const coinData = buylist[coin];
-    const total = coinData.reduce(
-      (acc, item) => acc + parseFloat(item.attributes.amount),
-      0
-    );
-    const invest = coinData.reduce(
-      (acc, item) => acc + parseFloat(item.attributes.amount_eur),
-      0
-    );
+  Object.keys(transfertlist).forEach((coin) => {
+    const coinData = transfertlist[coin];
+
+    let total = 0;
+    let rewards = 0;
+    let totalStakeMouvement = 0;
+
+    totalStakeMouvement = coinData.reduce((acc, item) => {
+      const amount = parseFloat(item.attributes.amount);
+      if (
+        item.attributes.in_or_out === "outgoing" &&
+        item.attributes.tags[0].attributes.short_name == "stake"
+      ) {
+        return acc - amount;
+      } else if (
+        item.attributes.in_or_out === "incoming" &&
+        item.attributes.tags[0].attributes.short_name == "unstake"
+      ) {
+        return acc + amount;
+      }
+      return acc; // Handle other cases (e.g., unknown in_or_out value)
+    }, 0);
+
+    rewards = coinData.reduce((acc, item) => {
+      const amount = parseFloat(item.attributes.amount);
+      if (
+        item.attributes.in_or_out === "incoming" &&
+        item.attributes.tags[0].attributes.short_name == "reward"
+      ) {
+        return acc - amount;
+      } else {
+        return 0;
+      }
+    }, 0);
+
     const fee = coinData.reduce(
       (acc, item) => acc + parseFloat(item.attributes.fee),
       0
     );
-    const averageprice = invest / total;
 
-    transformedBuylist[coin] = {
-      buy: {
+    if (totalStakeMouvement < 0) {
+      stakedAmount = totalStakeMouvement * -1;
+    } else {
+      stakedAmount = 0;
+    }
+
+    total = rewards + totalStakeMouvement;
+
+    transformtransfertlist[coin] = {
+      transfert: {
         total,
-        invest,
         fee,
-        averageprice,
-        buydetails: coinData, // Laissez tous les attributs par défaut
+        rewards,
+        stakedAmount,
+        transfertdetails: coinData, // Laissez tous les attributs par défaut
       },
     };
   });
 
-  return transformedBuylist;
+  return transformtransfertlist;
 }
-
 // Fonction pour regrouper par coin
 function regrouperParCoin(data) {
   const result = {};
@@ -245,13 +275,10 @@ const getDataCrypto = async (item) => {
   };
 
   try {
-    cryptotransactionResponse = await axios.default.get(
-      endpoints.cryptotransaction,
-      {
-        params: { page_size: 10000, status: "finished" },
-        headers,
-      }
-    );
+    cryptotransactionResponse = await axios.get(endpoints.cryptotransaction, {
+      params: { page_size: 10000, status: "finished" },
+      headers,
+    });
   } catch (error) {
     console.log("voici l erreur datacrypto ");
     throw error;
@@ -289,8 +316,6 @@ const getDataCrypto = async (item) => {
   });
 
   Object.keys(cryptoDataRaw).forEach((prop) => {
-    console.log(`Propriété : ${prop}`);
-    console.log(`Length :`, cryptoDataRaw[prop].length);
     if (cryptoDataRaw[prop].length > 0) {
       cryptoDataRaw[prop] = regrouperParCle(cryptoDataRaw[prop], "coin");
       if (prop == "buyList") {
